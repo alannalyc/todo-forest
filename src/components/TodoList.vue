@@ -4,6 +4,30 @@
     
     <TodoInput />
     
+    <!-- In Progress Section -->
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-green-600 mb-2 uppercase tracking-wide">🌱 In Progress</h3>
+      <div 
+        @drop="handleDrop($event, null)"
+        @dragover.prevent
+        @dragenter.prevent
+        class="space-y-2 min-h-20 p-2 rounded-lg border-2 border-dashed border-transparent hover:border-green-200 transition-colors"
+        :class="{ 'border-green-300 bg-green-50': isDraggingOver === 'inProgress' }"
+        @dragenter="isDraggingOver = 'inProgress'"
+        @dragleave="isDraggingOver = null"
+      >
+        <TodoItem 
+          v-for="todo in store.inProgressTodos" 
+          :key="todo.id"
+          :todo="todo"
+          @dragStart="startDrag"
+        />
+        <div v-if="store.inProgressTodos.length === 0" class="text-center text-gray-400 py-4 text-sm">
+          No tasks in progress
+        </div>
+      </div>
+    </div>
+    
     <!-- Priority Section -->
     <div class="mb-6">
       <h3 class="text-sm font-semibold text-red-400 mb-2 uppercase tracking-wide">Priority</h3>
@@ -75,7 +99,15 @@ function startDrag(todo) {
 function handleDrop(e, isPriority) {
   e.preventDefault()
   if (draggedTodo.value) {
-    store.setPriority(draggedTodo.value.id, isPriority)
+    if (isPriority === null) {
+      store.toggleInProgress(draggedTodo.value.id)
+      store.setPriority(draggedTodo.value.id, false)
+    } else {
+      store.setPriority(draggedTodo.value.id, isPriority)
+      if (draggedTodo.value.inProgress) {
+        store.toggleInProgress(draggedTodo.value.id)
+      }
+    }
     draggedTodo.value = null
     isDraggingOver.value = null
   }
