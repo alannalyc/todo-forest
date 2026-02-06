@@ -66,31 +66,39 @@ export const useTodoStore = defineStore('todos', {
       // place features using similar placement strategy to trees
       let x = 0
       let y = 0
-      const occupied = new Set([...this.trees.map(t => `${t.x},${t.y}`), ...this.features.map(f => `${f.x},${f.y}`)])
+      let baseX = 0
+      let baseY = 0
+      const occupied = new Set([...this.trees.map(t => `${t.baseX ?? t.x},${t.baseY ?? t.y}`), ...this.features.map(f => `${f.x},${f.y}`)])
 
-      // helper to check lakes (ellipse centered at f.x+40,f.y+40 with rx=60,ry=28)
+      const lakeHalfW = 120
+      const lakeHalfH = 35
+      // helper to check lakes (rounded rhombus-like area)
       const isInLake = (px, py) => this.features.some(f => {
         if (f.type !== 'lake') return false
-        const dx = px - (f.x + 40)
-        const dy = py - (f.y + 40)
-        return (dx * dx) / (60 * 60) + (dy * dy) / (28 * 28) <= 1
+        const cx = f.x + 40
+        const cy = f.y + 40
+        const dx = Math.abs(px - cx)
+        const dy = Math.abs(py - cy)
+        return (dx / lakeHalfW) + (dy / lakeHalfH) <= 1
       })
 
       if (this.trees.length > 0) {
         // choose a random existing tree so placement is more organic
         const existingTree = this.trees[Math.floor(Math.random() * this.trees.length)]
+        baseX = existingTree.baseX ?? existingTree.x
+        baseY = existingTree.baseY ?? existingTree.y
         const directions = [
-          { dx: 60, dy: 0 },
-          { dx: 30, dy: -30 },
-          { dx: -30, dy: -30 },
-          { dx: -60, dy: 0 },
-          { dx: -30, dy: 30 },
-          { dx: 30, dy: 30 }
+          { dx: 100, dy: 0 },
+          { dx: 50, dy: -50 },
+          { dx: -50, dy: -50 },
+          { dx: -100, dy: 0 },
+          { dx: -50, dy: 50 },
+          { dx: 50, dy: 50 }
         ]
         let found = false
         for (const d of directions) {
-          const nx = existingTree.x + d.dx
-          const ny = existingTree.y + d.dy
+          const nx = baseX + d.dx
+          const ny = baseY + d.dy
           if (!occupied.has(`${nx},${ny}`) && !isInLake(nx + 40, ny + 40)) {
             x = nx
             y = ny
@@ -102,8 +110,8 @@ export const useTodoStore = defineStore('todos', {
         if (!found) {
           for (let radius = 2; radius <= 8 && !found; radius++) {
             for (const d of directions) {
-              const nx = existingTree.x + d.dx * radius
-              const ny = existingTree.y + d.dy * radius
+              const nx = baseX + d.dx * radius
+              const ny = baseY + d.dy * radius
               if (!occupied.has(`${nx},${ny}`) && !isInLake(nx + 40, ny + 40)) {
                 x = nx
                 y = ny
@@ -112,6 +120,25 @@ export const useTodoStore = defineStore('todos', {
               }
             }
           }
+        }
+      }
+
+      const isOnTree = (px, py) => this.trees.some(t => {
+        const cx = t.baseX ?? t.x
+        const cy = t.baseY ?? t.y
+        const dx = Math.abs(px - cx)
+        const dy = Math.abs(py - cy)
+        return (dx / lakeHalfW) + (dy / lakeHalfH) <= 1
+      })
+
+      if (type === 'lake') {
+        let attempts = 0
+        while ((occupied.has(`${x},${y}`) || isInLake(x + 40, y + 40) || isOnTree(x, y)) && attempts < 24) {
+          const angle = Math.random() * Math.PI * 2
+          const dist = 60 + Math.floor(Math.random() * 3) * 60
+          x = (baseX || 0) + Math.round(Math.cos(angle) * dist)
+          y = (baseY || 0) + Math.round(Math.sin(angle) * dist)
+          attempts++
         }
       }
 
@@ -135,10 +162,15 @@ export const useTodoStore = defineStore('todos', {
           // random nearby jitter
           const angle = Math.random() * Math.PI * 2
           const dist = 30 + Math.floor(Math.random() * 3) * 30
-          feature.x = (existingTree?.x || 0) + Math.round(Math.cos(angle) * dist)
-          feature.y = (existingTree?.y || 0) + Math.round(Math.sin(angle) * dist)
+            feature.x = (baseX || 0) + Math.round(Math.cos(angle) * dist)
+            feature.y = (baseY || 0) + Math.round(Math.sin(angle) * dist)
           attempts++
         }
+        // keep bunny motion state aligned to final spawn position
+        feature.px = feature.x
+        feature.py = feature.y
+        feature.tx = feature.x
+        feature.ty = feature.y
         // Start newly spawned bunnies in a moving state for 2 seconds
         feature.state = 'moving'
         feature.stateTimer = 0
@@ -177,15 +209,17 @@ export const useTodoStore = defineStore('todos', {
       if (this.trees.length > 0) {
         // Place adjacent to a random existing tree to prevent linear growth
         const existingTree = this.trees[Math.floor(Math.random() * this.trees.length)]
-        const occupied = new Set(this.trees.map(t => `${t.x},${t.y}`))
+        const occupied = new Set(this.trees.map(t => `${t.baseX ?? t.x},${t.baseY ?? t.y}`))
+        const baseX = existingTree.baseX ?? existingTree.x
+        const baseY = existingTree.baseY ?? existingTree.y
 
         const directions = [
-          { dx: 60, dy: 0 },    // Right
-          { dx: 30, dy: -30 },  // Upper-right
-          { dx: -30, dy: -30 }, // Upper-left
-          { dx: -60, dy: 0 },   // Left
-          { dx: -30, dy: 30 },  // Lower-left
-          { dx: 30, dy: 30 }    // Lower-right
+          { dx: 120, dy: 0 },    // Right
+          { dx: 60, dy: -35 },  // Upper-right
+          { dx: -60, dy: -35 }, // Upper-left
+          { dx: -120, dy: 0 },   // Left
+          { dx: -60, dy: 35 },  // Lower-left
+          { dx: 60, dy: 35 }    // Lower-right
         ]
 
         // Shuffle directions to randomize growth
@@ -197,8 +231,8 @@ export const useTodoStore = defineStore('todos', {
         // Try immediate neighbors first
         let found = false
         for (const d of directions) {
-          const nx = existingTree.x + d.dx
-          const ny = existingTree.y + d.dy
+          const nx = baseX + d.dx
+          const ny = baseY + d.dy
           if (!occupied.has(`${nx},${ny}`) && !isInLake(nx + 40, ny + 40)) {
             x = nx
             y = ny
@@ -211,8 +245,8 @@ export const useTodoStore = defineStore('todos', {
         if (!found) {
           for (let radius = 2; radius <= 8 && !found; radius++) {
             for (const d of directions) {
-              const nx = existingTree.x + d.dx * radius
-              const ny = existingTree.y + d.dy * radius
+              const nx = baseX + d.dx * radius
+              const ny = baseY + d.dy * radius
               if (!occupied.has(`${nx},${ny}`) && !isInLake(nx + 40, ny + 40)) {
                 x = nx
                 y = ny
@@ -228,8 +262,8 @@ export const useTodoStore = defineStore('todos', {
           const scanRange = 8
           outer: for (let rx = -scanRange; rx <= scanRange; rx++) {
             for (let ry = -scanRange; ry <= scanRange; ry++) {
-              const nx = existingTree.x + rx * 40
-              const ny = existingTree.y + ry * 40
+              const nx = baseX + rx * 40
+              const ny = baseY + ry * 40
               if (!occupied.has(`${nx},${ny}`) && !isInLake(nx + 40, ny + 40)) {
                 x = nx
                 y = ny
@@ -240,13 +274,47 @@ export const useTodoStore = defineStore('todos', {
         }
       }
 
+      // Randomly select tree and fruit sprites
+      const treeSprite = Math.random() < 0.5 ? 'oak1' : 'oak2'
+      const fruitSprite = Math.random() < 0.5 ? 'apple' : 'orange'
+
+      // Add a small random spawn radius so trees don't stack perfectly
+      const jitterRadius = 5
+      const minSpawnDistance = jitterRadius * 2
+      const jitter = () => (Math.random() * 2 - 1) * jitterRadius
+      const isTooClose = (px, py) => this.trees.some(t => {
+        const cx = t.baseX ?? t.x
+        const cy = t.baseY ?? t.y
+        const dx = px - cx
+        const dy = py - cy
+        return dx * dx + dy * dy < minSpawnDistance * minSpawnDistance
+      })
+
+      let spawnX = x
+      let spawnY = y
+      let attempts = 0
+      while (attempts < 12) {
+        const candidateX = x + jitter()
+        const candidateY = y + jitter()
+        if (!isInLake(candidateX + 40, candidateY + 40) && !isTooClose(candidateX, candidateY)) {
+          spawnX = candidateX
+          spawnY = candidateY
+          break
+        }
+        attempts++
+      }
+
       this.trees.push({
         id: Date.now(),
         todoId,
-        x,
-        y,
+        x: spawnX,
+        y: spawnY,
+        baseX: x,
+        baseY: y,
         stage,
-        dateCompleted: stage === 'grown' ? new Date().toISOString() : null
+        dateCompleted: stage === 'grown' ? new Date().toISOString() : null,
+        treeSprite,
+        fruitSprite
       })
       this.saveToLocalStorage()
     },
@@ -326,6 +394,27 @@ export const useTodoStore = defineStore('todos', {
         this.completedCount = data.completedCount || 0
         this.trees = data.trees || []
         this.features = data.features || []
+        
+        // Migrate existing trees to have sprite properties
+        this.trees.forEach(tree => {
+          if (!tree.treeSprite) {
+            tree.treeSprite = Math.random() < 0.5 ? 'oak1' : 'oak2'
+          }
+          if (!tree.fruitSprite) {
+            tree.fruitSprite = Math.random() < 0.5 ? 'apple' : 'orange'
+          }
+          if (tree.baseX == null) {
+            tree.baseX = tree.x
+          }
+          if (tree.baseY == null) {
+            tree.baseY = tree.y
+          }
+        })
+        
+        // Save the migrated data
+        if (this.trees.length > 0) {
+          this.saveToLocalStorage()
+        }
       }
     }
   }
