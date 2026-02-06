@@ -1,10 +1,7 @@
 <template>
-  <div class="min-h-screen bg-green-300 flex">
+  <div class="min-h-screen bg-black/0 flex">
     <!-- Left side - Forest -->
     <div class="flex-1 flex flex-col">
-      <div class="p-4 bg-white shadow-sm">
-        <Header />
-      </div>
       <Forest />
     </div>
     
@@ -14,7 +11,6 @@
 </template>
 
 <script setup>
-import Header from './components/Header.vue'
 import TodoList from './components/TodoList.vue'
 import Forest from './components/Forest.vue'
 import { useTodoStore } from './stores/todoStore'
