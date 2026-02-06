@@ -1,10 +1,10 @@
 <template>
-  <div class="w-full h-full bg-green-300 overflow-hidden relative p-4">
+  <div class="w-full h-full bg-cyan-200 overflow-hidden relative py-4">
     <Header />
     <!-- SVG Canvas for isometric rendering -->
     <svg
       ref="svgCanvas"
-      class="w-full h-full cursor-grab active:cursor-grabbing"
+      class="w-full h-full cursor-grab bg-green-300 active:cursor-grabbing"
       @mousedown="startPan"
       @mousemove="handlePan"
       @mouseup="endPan"
@@ -36,7 +36,7 @@
               </g>
               <g v-else>
                 <!-- Tree trunk (brown cube) -->
-                <polygon points="0,-20 10,-10 10,10 0,20 -10,10 -10,-10" fill="#8B6F47" stroke="#654321" stroke-width="1"/>
+                <polygon points="0,-20 9,-10 5,10 0,15, -5,10 -9,-10" fill="#8B6F47" stroke="#654321" stroke-width="1"/>
               </g>
             </g>
           </g>
@@ -198,7 +198,7 @@
     </div>
 
     <!-- Info text -->
-    <div class="absolute top-20 left-6 bg-white rounded-lg p-4 shadow-lg max-w-xs">
+    <div class="absolute top-20 left-6 bg-white rounded-lg p-4 my-4 shadow-lg max-w-xs">
       <p class="text-sm text-gray-700">
         <span class="font-bold">{{ store.completedCount }}</span> trees planted
       </p>

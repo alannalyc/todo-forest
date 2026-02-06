@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-xl p-3 inline-block ">
+  <div class="rounded-xl px-8 py-4 inline-block ">
     <div v-if="!store.userName || isEditing" class="flex items-center gap-3">
       <input 
         v-model="nameInput"
